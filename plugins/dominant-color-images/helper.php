@@ -30,10 +30,23 @@ function dominant_color_set_image_editors( array $editors ): array {
 	if ( ! class_exists( 'Dominant_Color_Image_Editor_Imagick' ) ) {
 		require_once __DIR__ . '/class-dominant-color-image-editor-imagick.php';// @codeCoverageIgnore
 	}
+	if ( ! class_exists( 'Dominant_Color_Image_Editor_Vips_FFI' ) ) {
+		// Ensure the VIPS editor parent class is loaded before our extension
+		// tries to extend it. The VIPS plugin's filter may run after ours due
+		// to plugin load order, so we load it directly here if the plugin is active.
+		if ( ! class_exists( 'NotGlossy\\VipsImageEditorFFI\\Image_Editor_Vips_FFI' ) ) {
+			$vips_plugin_file = WP_PLUGIN_DIR . '/vips-image-editor-ffi/classes/class-image-editor-vips-ffi.php';
+			if ( file_exists( $vips_plugin_file ) ) {
+				require_once $vips_plugin_file;
+			}
+		}
+		require_once __DIR__ . '/class-dominant-color-image-editor-vips-ffi.php';// @codeCoverageIgnore
+	}
 
 	$replaces = array(
-		WP_Image_Editor_GD::class      => Dominant_Color_Image_Editor_GD::class,
-		WP_Image_Editor_Imagick::class => Dominant_Color_Image_Editor_Imagick::class,
+		WP_Image_Editor_GD::class                        => Dominant_Color_Image_Editor_GD::class,
+		WP_Image_Editor_Imagick::class                   => Dominant_Color_Image_Editor_Imagick::class,
+		'NotGlossy\\VipsImageEditorFFI\\Image_Editor_Vips_FFI' => Dominant_Color_Image_Editor_Vips_FFI::class,
 	);
 
 	foreach ( $replaces as $old => $new ) {
@@ -114,7 +127,8 @@ function dominant_color_get_dominant_color_data( int $attachment_id ) {
 		return $editor;
 	}
 
-	if ( ! ( $editor instanceof Dominant_Color_Image_Editor_GD || $editor instanceof Dominant_Color_Image_Editor_Imagick ) ) {
+	if ( ! ( $editor instanceof Dominant_Color_Image_Editor_GD || $editor instanceof Dominant_Color_Image_Editor_Imagick || $editor instanceof Dominant_Color_Image_Editor_Vips_FFI
+	) ) {
 		return new WP_Error( 'image_no_editor', __( 'No editor could be selected.', 'default' ) );
 	}
 
