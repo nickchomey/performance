@@ -140,6 +140,20 @@ function dominant_color_get_dominant_color_data( int $attachment_id ) {
 	}
 	$dominant_color_data['dominant_color'] = $hex;
 
+	// LQIP generation — available if the editor implements the required methods.
+	if ( method_exists( $editor, 'get_lqip_grid_values' ) ) {
+		require_once __DIR__ . '/lqip-generator.php';
+
+		$grid = $editor->get_lqip_grid_values();
+		if ( ! empty( $grid ) ) {
+			try {
+				$dominant_color_data['lqip'] = dominant_color_lqip_generate( $dominant_color, $grid );
+			} catch ( \UnexpectedValueException $e ) {
+				wp_trigger_error( 'dominant_color_lqip_generate', $e->getMessage() );
+			}
+		}
+	}
+
 	return $dominant_color_data;
 }
 
